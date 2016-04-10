@@ -24,7 +24,12 @@
 #
 # == Options
 #
-# --help, -h                   show help
+# --help, -h                  show help
+# --apikey, -k <api_key>      discogs api key
+# --username, -u <username>   discogs username
+# --songs, -s                 update itunes songs rating instead of album rating
+# --override, -o              override local values
+# --datafile, -f <filename>   datafile name (optional)
 #
 
 
@@ -54,6 +59,7 @@ def usage()
   puts "  -k, --apikey     discogs api key"
   puts "  -u, --username   discogs username"
   puts "  -s, --songs      update itunes songs rating instead of album rating"
+  puts "  -o, --override   override local values"
   puts "  -f, --datafile   datafile name (optional)"
   puts ""
 end
@@ -112,7 +118,7 @@ def save_data(datafile, data)
 end
 
 
-def update_itunes_ratings(discogs_ratings, update_songs=false)
+def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=false)
   puts "Updating iTunes ratings..."
   results = {'artists' => {'miss' => {}}, 'albums' => {'miss' => {}, 'updated' => {}, 'not_updated' => {}}, 'songs' => {'miss' => {}, 'updated' => {}, 'not_updated' => {}}}
   itunes = Appscript.app('iTunes')
@@ -147,7 +153,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=false)
     discogs_rating = discogs_album['rating'] * $convertion_ratio
     if update_songs
       # update song
-      if discogs_rating > track_rating
+      if discogs_rating > track_rating || override_values
         # song rating updated
         results['songs']['updated'][track_artist] ||= {}
         results['songs']['updated'][track_artist][track_name] ||= {'from' => track_album_rating, 'to' => discogs_rating}
@@ -159,7 +165,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=false)
       end
     else
       # update album
-      if discogs_rating > track_album_rating
+      if discogs_rating > track_album_rating || override_values
         # rating updated
         results['albums']['updated'][track_artist] ||= {}
         results['albums']['updated'][track_artist][track_album] ||= {'from' => track_album_rating, 'to' => discogs_rating}
@@ -196,11 +202,13 @@ def main()
   username = nil
   datafile = $data_file
   update_songs = false
+  override_values = false
   opts = GetoptLong.new(
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--apikey', '-k', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--username', '-u', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--songs', '-s', GetoptLong::NO_ARGUMENT ],
+    [ '--override', '-o', GetoptLong::NO_ARGUMENT ],
     [ '--datafile', '-f', GetoptLong::REQUIRED_ARGUMENT ]
   )
   begin
@@ -217,6 +225,8 @@ def main()
         datafile = arg
       when "--songs"
         update_songs = true
+      when "--override"
+        override_values = true
       end
     end
   rescue StandardError=>my_error_message
@@ -232,7 +242,7 @@ def main()
     discogs_ratings = get_discogs_ratings(username, apikey)
     save_data(datafile, discogs_ratings)
   end
-  update_itunes_ratings(discogs_ratings, update_songs)
+  update_itunes_ratings(discogs_ratings, update_songs, override_values)
 end
 
 

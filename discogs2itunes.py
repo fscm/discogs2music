@@ -13,6 +13,7 @@ Options:
   --apikey, -k <api_key>       discogs api key
   --username, -u <username>    discogs username
   --songs, -s                  update itunes songs rating instead of album rating
+  --override, -o               override local values
   --datafile, -f <filename>    datafile name (optional)
 '''
 
@@ -94,7 +95,7 @@ def save_data(datafile, data):
     out_file.close()
 
 
-def update_itunes_ratings(discogs_ratings, update_songs=False):
+def update_itunes_ratings(discogs_ratings, update_songs=False, override_values=False):
     print 'Updating iTunes ratings...'
     results = {'artists':{'miss':{}}, 'albums':{'miss':{}, 'updated':{}, 'not_updated':{}}, 'songs':{'miss':{}, 'updated':{}, 'not_updated':{}}}
     itunes = app('iTunes')
@@ -127,7 +128,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=False):
         discogs_rating = discogs_album['rating'] * convertion_ratio
         if update_songs:
             # update song
-            if discogs_rating > track_rating:
+            if discogs_rating > track_rating or override_values:
                 # song rating updated
                 results['songs']['updated'].setdefault(track_artist, {})
                 results['songs']['updated'][track_artist].setdefault(track_name, {'from':track_album_rating, 'to':discogs_rating})
@@ -138,7 +139,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=False):
                 results['songs']['not_updated'][track_artist].setdefault(track_name, {'from':track_album_rating, 'to':discogs_rating})
         else:
             # update album
-            if discogs_rating > track_album_rating:
+            if discogs_rating > track_album_rating or override_values:
                 results['albums']['updated'].setdefault(track_artist, {})
                 results['albums']['updated'][track_artist].setdefault(track_album, {'from':track_album_rating, 'to':discogs_rating})
                 track.album_rating.set(discogs_rating)
@@ -149,7 +150,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=False):
         ## print "%s - [%i -> %i] %s - [%i -> %i] %s" % (track_artist, track_album_rating, discogs_rating, track_album, track_rating, discogs_rating, track_name)
         bar.next()
     bar.finish()
-    ## puts results
+    ## print results
     artists_miss = reduce(lambda x,y: x+y, results['artists']['miss'].values() or [0])
     albums_miss = reduce(lambda x,y: x+y, map(lambda x: reduce(lambda x,y: x+y, x.values()), results['albums']['miss'].values()) or [0])
     albums_updated = reduce(lambda x,y: x+y, map(lambda x: len(x.keys()), results['albums']['updated'].values()) or [0])
@@ -171,8 +172,9 @@ def main(argv):
     username = None
     datafile = data_file
     update_songs = False
+    override_values = False
     try:
-        opts, args = getopt.getopt(argv, "hu:k:f:s", ["help", "username=", "apikey=", "file=", "songs"])
+        opts, args = getopt.getopt(argv, "hu:k:f:so", ["help", "username=", "apikey=", "file=", "songs", "override"])
     except getopt.GetoptError as err:
         print str(err)
         usage()
@@ -189,6 +191,8 @@ def main(argv):
             datafile = arg
         elif opt in ('-s', '--songs'):
             update_songs = True
+        elif opt in ('-o', '--override'):
+            override_values = True
     if username is None or apikey is None:
         print str("'username' and apikey are mandatory")
         usage()
@@ -197,7 +201,7 @@ def main(argv):
     if discogs_ratings is None:
         discogs_ratings = get_discogs_ratings(username, apikey)
         save_data(datafile, discogs_ratings)
-    update_itunes_ratings(discogs_ratings, update_songs)
+    update_itunes_ratings(discogs_ratings, update_songs, override_values)
 
 
 if __name__ == "__main__":
