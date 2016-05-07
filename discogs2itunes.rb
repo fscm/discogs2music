@@ -17,6 +17,7 @@
 # - open-uri
 # - progress_bar
 # - rb-appscript
+# - unidecoder
 #
 # == Usage
 #
@@ -38,6 +39,7 @@ require 'appscript'                rescue "This script depends on the rb-appscri
 require 'getoptlong'
 require 'httparty'                 rescue "This script depends on the httparty gem. Please run '(sudo) gem install httparty'."
 require 'progress_bar'             rescue "This script depends on the progress_bar gem. Please run '(sudo) gem install progress_bar'."
+require 'unidecoder'               rescue "This script depends on the unidecoder gem. Please run '(sudo) gem install progress_bar'."
 
 
 I18n.enforce_available_locales = false
@@ -81,8 +83,8 @@ def get_discogs_ratings(username, apikey)
       release_id = release['id'].to_i
       release_instance_id = release['instance_id'].to_i
       release_album_rating = release['rating'].to_i
-      release_album = release['basic_information']['title'].downcase.strip.parameterize
-      release_artist = release['basic_information']['artists'].map{ |e| e['name'].gsub(/\(\d+\)$/, '') }.join(' - ').downcase.strip.parameterize
+      release_album = release['basic_information']['title'].to_ascii.parameterize
+      release_artist = release['basic_information']['artists'].map{ |e| e['name'].gsub(/\(\d+\)$/, '') }.join(' - ').to_ascii.parameterize
       ## puts "#{release_artist} - [#{release_album_rating}] #{release_album} (#{release_id} / #{release_instance_id})"
       ratings[release_artist] ||= {}
       ratings[release_artist][release_album] ||= {}
@@ -126,10 +128,10 @@ def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=f
   total_tracks = tracks.length
   bar = ProgressBar.new(total_tracks, :bar, :counter)
   tracks.each do |track|
-    track_artist = track.artist.get.downcase.strip.parameterize
-    track_album = track.album.get.downcase.strip.parameterize
-    track_name = track.name.get.downcase.strip.parameterize
-    track_album_rating = track.album_rating.get
+    track_artist = track.artist.get.to_ascii.parameterize
+    track_album = track.album.get.to_ascii.parameterize
+    track_name = track.name.get.to_ascii.parameterize
+    track_album_rating = track.album_rating.get.to_i
     track_rating = track.rating.get.to_i
     ## puts "#{track_artist} - [#{track_album_rating}] #{track_album} - [#{track_rating}] #{track_name}"
     discogs_artist = discogs_ratings[track_artist]
@@ -253,4 +255,3 @@ if __FILE__==$0
     nil
   end
 end
-

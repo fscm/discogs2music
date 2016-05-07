@@ -46,6 +46,7 @@ For the Ruby version of the script the following gems are required:
 * httparty
 * progress_bar
 * rb-appscript
+* unidecoder
 
 You can install gems with:
 
