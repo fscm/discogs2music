@@ -39,7 +39,7 @@ require 'appscript'                rescue "This script depends on the rb-appscri
 require 'getoptlong'
 require 'httparty'                 rescue "This script depends on the httparty gem. Please run '(sudo) gem install httparty'."
 require 'progress_bar'             rescue "This script depends on the progress_bar gem. Please run '(sudo) gem install progress_bar'."
-require 'unidecoder'               rescue "This script depends on the unidecoder gem. Please run '(sudo) gem install progress_bar'."
+require 'unidecoder'               rescue "This script depends on the unidecoder gem. Please run '(sudo) gem install unidecoder'."
 
 
 I18n.enforce_available_locales = false
