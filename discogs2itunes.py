@@ -33,7 +33,7 @@ API_BASEURL = "https://api.discogs.com"
 API_FORMAT = "application/vnd.discogs.v2.plaintext+json"
 API_LIMIT = 100
 CONVERTION_RATIO = 20
-DATA_FILE = 'discogs2itunes.dat'
+DATA_FILE = 'discogs2itunes.json'
 DATE_EPOCH = datetime.utcfromtimestamp(0)
 DATE_NOW = datetime.utcnow().replace(microsecond=0)
 
