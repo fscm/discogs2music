@@ -4,36 +4,36 @@ Update your iTunes album ratings with your Discogs ratings.
 
 ## Synopsis
 
-This script will try to update the album rating value of your iTunes albuns by 
-getting the rating of the same album on your Discogs colletion.
+This script will try to update the album rating value of your iTunes albums by
+getting the rating of the same album on your Discogs collection.
 
-Differences in album titles and the usage of special characters on album names 
-may prevent the script from recognising the albuns properly.
+Differences in album titles and the usage of special characters on album names
+may prevent the script from recognizing the albums properly.
 
-The script is available on both Ruby and Python. Both versions will perform the 
-same tasks however, due to the way that both languages deal with character 
-encoding, normalisation and parametrisation, the results may be different. 
+The script is available on both Ruby and Python. Both versions will perform the
+same tasks however, due to the way that both languages deal with character
+encoding, normalization and parametrization, the results may be different.
 Please use the one that produces the best results for your iTunes library.
 
-Data files produced by the scripts are not interchangeable despite both of the 
+Data files produced by the scripts are not interchangeable despite both of the
 scripts are using the respective marshal libraries.
 
 ## Getting Started
 
 There are a couple of things needed for either of the scripts to work.
 
-### Prerequisities
+### Prerequisites
 
 Follow the instructions for the version of the script that you wish to use.
 Discogs instructions are required for both versions.
 
 #### Discogs
 
-A discogs user account is required (to obtain the ratings from). You can 
-create an account at [https://www.discogs.com/users/create](https://www.discogs.com/users/create) 
+A discogs user account is required (to obtain the ratings from). You can
+create an account at [https://www.discogs.com/users/create](https://www.discogs.com/users/create)
 if you do not have one already.
 
-A discogs personal token is also required. You can obtain one at 
+A discogs personal token is also required. You can obtain one at
 [https://www.discogs.com/settings/developers](https://www.discogs.com/settings/developers)
 
 
@@ -54,7 +54,7 @@ You can install gems with:
 sudo gem install <gem_name>
 ```
 
-Installing the httparty gem may require adicional options:
+Installing the httparty gem may require additional options:
 
 ```
 sudo gem install -n /usr/local/bin httparty
@@ -82,13 +82,13 @@ You can install modules with:
 sudo pip install <module_name>
 ```
 
-The python script will also require openssl version 1.0. This script will not 
-be able to connect to Discogs using TLS with the default openssl version on 
+The python script will also require openssl version 1.0. This script will not
+be able to connect to Discogs using TLS with the default openssl version on
 Mac OS X (which is 0.9.8).
 
 ### Installation
 
-Nothing special to be done. Just download the version of the script that you 
+Nothing special to be done. Just download the version of the script that you
 wish to use.
 
 ### Usage
@@ -131,7 +131,7 @@ Options:
 
 ## Versioning
 
-This project uses [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/fscm/discogs2itunes/tags). 
+This project uses [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/fscm/discogs2itunes/tags).
 
 ## Authors
 
