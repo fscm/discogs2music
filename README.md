@@ -4,19 +4,16 @@ Update your iTunes album ratings with your Discogs ratings.
 
 ## Synopsis
 
-This script will try to update the album rating value of your iTunes albums by
-getting the rating of the same album on your Discogs collection.
+This script will try to update the album or songs rating value of your iTunes
+albums by getting the rating of the same album from your Discogs collection.
 
-Differences in album titles and the usage of special characters on album names
-may prevent the script from recognizing the albums properly.
+Differences in album/songs titles and the usage of special characters on
+album/songs names may prevent the script from recognizing the albums properly.
 
 The script is available on both Ruby and Python. Both versions will perform the
 same tasks however, due to the way that both languages deal with character
 encoding, normalization and parametrization, the results may be different.
 Please use the one that produces the best results for your iTunes library.
-
-Data files produced by the scripts are not interchangeable despite both of the
-scripts are using the respective marshal libraries.
 
 ## Getting Started
 
@@ -29,11 +26,11 @@ Discogs instructions are required for both versions.
 
 #### Discogs
 
-A discogs user account is required (to obtain the ratings from). You can
+A Discogs user account is required (to obtain the ratings from). You can
 create an account at [https://www.discogs.com/users/create](https://www.discogs.com/users/create)
 if you do not have one already.
 
-A discogs personal token is also required. You can obtain one at
+A Discogs personal token is also required. You can obtain one at
 [https://www.discogs.com/settings/developers](https://www.discogs.com/settings/developers)
 
 
@@ -66,15 +63,14 @@ For the Python version of the script the following modules are required:
 
 * appscript
 * getopt
-* inflection
 * json
-* marshal
 * os.path
 * progress
 * re
 * requests
 * sys
 * time
+* unidecode
 
 You can install modules with:
 
@@ -112,13 +108,14 @@ Options:
 
 ```
 Usage:
-  discogs2itunes.py -u <username> -k <apikey> [-s -f <filename>]
+  discogs2itunes.py -u <username> -k <apikey> [-f <filename>] [-h] [-o] [-s]
 Options:
-  --help, -h                   show help
-  --apikey, -k <api_key>       discogs api key
-  --username, -u <username>    discogs username
-  --songs, -s                  update itunes songs rating instead of album rating
-  --datafile, -f <filename>    datafile name (optional)
+  -f, --datafile <filename>    datafile name (optional)
+  -h, --help                   show help (optional)
+  -k, --apikey <api_key>       discogs api key
+  -o, --override               override local values (optional)
+  -s, --songs                  update itunes songs rating instead of album rating (optional)
+  -u, --username <username>    discogs username
 ```
 
 ## Contributing
