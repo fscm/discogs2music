@@ -38,9 +38,9 @@ A Discogs personal token is also required. You can obtain one at
 
 For the Ruby version of the script the following gems are required:
 
-* activesupport
 * getoptlong
-* httparty
+* json
+* open-uri
 * progress_bar
 * rb-appscript
 * unidecoder
@@ -49,12 +49,6 @@ You can install gems with:
 
 ```
 sudo gem install <gem_name>
-```
-
-Installing the httparty gem may require additional options:
-
-```
-sudo gem install -n /usr/local/bin httparty
 ```
 
 #### Python
@@ -95,13 +89,14 @@ Both versions of the script use the same arguments.
 
 ```
 Usage:
-  discogs2itunes.rb -u <username> -k <apikey> [-s -f <filename>]
+  discogs2itunes.rb -u <username> -k <apikey> [-f <filename>] [-h] [-o] [-s]
 Options:
-  -h, --help       show help
-  -k, --apikey     discogs api key
-  -u, --username   discogs username
-  -s, --songs      update itunes songs rating instead of album rating
-  -f, --datafile   datafile name (optional)
+  -f, --datafile <filename>  datafile name (optional)
+  -h, --help                 show help (optional)
+  -k, --apikey <api_key>     discogs api key
+  -o, --override             override local values (optional)
+  -s, --songs                update itunes songs rating instead of album rating (optional)
+  -u, --username <username>  discogs username
 ```
 
 #### Python

@@ -7,13 +7,12 @@
 #
 # == Synopsis
 #
-# discogs2itunes: Update iTunes album ratings from discogs
+# discogs2itunes: Update iTunes album ratings from Discogs
 #
 # == Requires
 #
-# - activesupport
 # - getoptlong
-# - httparty
+# - json
 # - open-uri
 # - progress_bar
 # - rb-appscript
@@ -21,81 +20,52 @@
 #
 # == Usage
 #
-# discogs2itunes.rb -u <username> -k <apikey> [-s -f <filename>]
+# discogs2itunes.rb -u <username> -k <apikey> [-f <filename>] [-h] [-o] [-s]
 #
 # == Options
 #
-# --help, -h                  show help
-# --apikey, -k <api_key>      discogs api key
-# --username, -u <username>   discogs username
-# --songs, -s                 update itunes songs rating instead of album rating
-# --override, -o              override local values
-# --datafile, -f <filename>   datafile name (optional)
+# -f, --datafile <filename>  datafile name (optional)
+# -h, --help                 show help (optional)
+# -k, --apikey <api_key>     discogs api key
+# -o, --override             override local values (optional)
+# -s, --songs                update itunes songs rating instead of album rating (optional)
+# -u, --username <username>  discogs username
 #
 
 
-require 'active_support/inflector' rescue "This script depends on the active_support gem. Please run '(sudo) gem install activesupport'."
-require 'appscript'                rescue "This script depends on the rb-appscript gem. Please run '(sudo) gem install rb-appscript'."
+require 'appscript'
 require 'getoptlong'
-require 'httparty'                 rescue "This script depends on the httparty gem. Please run '(sudo) gem install httparty'."
-require 'progress_bar'             rescue "This script depends on the progress_bar gem. Please run '(sudo) gem install progress_bar'."
-require 'unidecoder'               rescue "This script depends on the unidecoder gem. Please run '(sudo) gem install unidecoder'."
-
+require 'json'
+require 'net/http'
+require 'progress_bar'
+require 'time'
+require 'uri'
+require 'unidecoder'
 
 I18n.enforce_available_locales = false
 
-$api_accept = 'application/vnd.discogs.v2.plaintext+json'
-$api_baseurl = 'https://api.discogs.com'
-$api_limit = 100
-$data_file = 'discogs2itunes.dat'
-$convertion_ratio = 20
+
+$API_BASEURL = "https://api.discogs.com"
+$API_FORMAT = 'application/vnd.discogs.v2.plaintext+json'
+$API_LIMIT = 100
+$CONVERTION_RATIO = 20
+$DATA_FILE = 'discogs2itunes.json'
+$DATE_NOW = Time.now.utc.to_i
 
 
 def usage()
   puts ""
   puts "Discogs to iTunes script"
   puts "Usage:"
-  puts "  ruby discogs2itunes.rb -u <username> -k <apikey> [-s -f <filename>]"
+  puts "  %{discogs2itunes} -u <username> -k <apikey> [-f <filename>] [-h] [-o] [-s]" % {:discogs2itunes => File.basename($0)}
   puts "Options:"
-  puts "  -h, --help       show help"
-  puts "  -k, --apikey     discogs api key"
-  puts "  -u, --username   discogs username"
-  puts "  -s, --songs      update itunes songs rating instead of album rating"
-  puts "  -o, --override   override local values"
-  puts "  -f, --datafile   datafile name (optional)"
+  puts "  -f, --datafile <filename>  datafile name (optional)"
+  puts "  -h, --help                 show help (optional)"
+  puts "  -k, --apikey <api_key>     discogs api key"
+  puts "  -o, --override             override local values (optional)"
+  puts "  -s, --songs                update itunes songs rating instead of album rating (optional)"
+  puts "  -u, --username <username>  discogs username"
   puts ""
-end
-
-
-def get_discogs_ratings(username, apikey)
-  puts "Geting Discogs ratings..."
-  ratings = {}
-  headers =  {'Accept' => $api_accept, 'Content-Type' => 'application/json', 'User-Agent' => 'discogs2itunes'}
-  query = {token: apikey, page: '1', per_page: $api_limit}
-  jsondoc = HTTParty.get("#{$api_baseurl}/users/#{username}/collection/folders/0/releases", :query => query, :headers => headers).parsed_response
-  total_pages = jsondoc['pagination']['pages']
-  bar = ProgressBar.new(total_pages, :bar, :counter)
-  for page in (1..total_pages)
-    query = {token: apikey, page: page, per_page: $api_limit}
-    jsondoc = HTTParty.get("#{$api_baseurl}/users/#{username}/collection/folders/0/releases", :query => query, :headers => headers).parsed_response
-    releases = jsondoc['releases']
-    for release in releases
-      release_id = release['id'].to_i
-      release_instance_id = release['instance_id'].to_i
-      release_album_rating = release['rating'].to_i
-      release_album = release['basic_information']['title'].to_ascii.parameterize
-      release_artist = release['basic_information']['artists'].map{ |e| e['name'].gsub(/\(\d+\)$/, '') }.join(' - ').to_ascii.parameterize
-      ## puts "#{release_artist} - [#{release_album_rating}] #{release_album} (#{release_id} / #{release_instance_id})"
-      ratings[release_artist] ||= {}
-      ratings[release_artist][release_album] ||= {}
-      ratings[release_artist][release_album]['rating'] ||= release_album_rating
-      ratings[release_artist][release_album]['id'] ||= release_id
-      ratings[release_artist][release_album]['instance_id'] ||= release_instance_id
-    end
-    sleep 0.25
-    bar.increment!
-  end
-  return ratings
 end
 
 
@@ -103,8 +73,12 @@ def load_data(datafile)
   data = nil
   if File.file?(datafile)
     puts "Loading file..."
-    in_file = File.binread(datafile)
-    data = Marshal.load(in_file)
+    in_file = File.read(datafile)
+    begin
+      data = JSON.parse(in_file)
+    rescue JSON::ParserError
+      puts "Invalid data file"
+    end
   else
     puts "Data file not found."
   end
@@ -114,26 +88,86 @@ end
 
 def save_data(datafile, data)
   puts "Writing to file..."
-  File.open(datafile, 'wb') do |out_file|
-    out_file.write(Marshal.dump(data))
+  File.open(datafile, 'w') do |out_file|
+    out_file.write(JSON.dump(data))
   end
+end
+
+
+def get_discogs_ratings(username, apikey, ratings={})
+  puts "Fetching data from Discogs..."
+  last_updated = $DATE_NOW
+  headers =  {
+    'Accept' => $API_FORMAT,
+    'Content-Type' => 'application/json',
+    'User-Agent' => 'discogs2itunes' }
+  query = {
+    token: apikey,
+    page: '1',
+    per_page: $API_LIMIT }
+  uri = URI.parse("#{$API_BASEURL}/users/#{username}/collection/folders/0/releases")
+  uri.query = URI.encode_www_form(query)
+  http = Net::HTTP.new(uri.host, uri.port)
+  http.use_ssl = true
+  get = Net::HTTP::Get.new(uri.request_uri, headers)
+  jsondoc = JSON.parse(http.request(get).body)
+  total_pages = jsondoc['pagination']['pages'].to_i
+  if total_pages < 1
+    return {'last_updated' => last_updated, 'ratings' => ratings}
+  end
+  bar = ProgressBar.new(total_pages, :bar, :counter)
+  for page in (1..total_pages)
+    query = {
+      token: apikey,
+      page: page,
+      per_page: $API_LIMIT }
+    uri.query = URI.encode_www_form(query)
+    get = Net::HTTP::Get.new(uri.request_uri, headers)
+    jsondoc = JSON.parse(http.request(get).body)
+    releases = jsondoc['releases']
+    for release in releases
+      release_id = release['id'].to_i
+      release_instance_id = release['instance_id'].to_i
+      release_album_rating = release['rating'].to_i
+      release_album = release['basic_information']['title'].to_ascii.downcase
+      release_artist = release['basic_information']['artists'].map{ |e| e['name'].gsub(/\(\d+\)$/, '') }.join(' - ').to_ascii.downcase
+      #puts "#{release_artist} - [#{release_album_rating}] #{release_album} (#{release_id} / #{release_instance_id})"
+      ratings[release_artist] ||= {}
+      ratings[release_artist][release_album] ||= {}
+      ratings[release_artist][release_album]['rating'] ||= release_album_rating
+      ratings[release_artist][release_album]['id'] ||= release_id
+      ratings[release_artist][release_album]['instance_id'] ||= release_instance_id
+    end
+    sleep 0.25
+    bar.increment!
+  end
+  return {'last_updated' => last_updated, 'ratings' => ratings}
 end
 
 
 def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=false)
   puts "Updating iTunes ratings..."
-  results = {'artists' => {'miss' => {}}, 'albums' => {'miss' => {}, 'updated' => {}, 'not_updated' => {}}, 'songs' => {'miss' => {}, 'updated' => {}, 'not_updated' => {}}}
+
+  results = {
+    'artists' => {'miss' => {}},
+    'albums' => {
+      'miss' => {},
+      'updated' => {},
+      'not_updated' => {} },
+    'songs' => {
+      'miss' => {},
+      'updated' => {},
+      'not_updated' => {} } }
   itunes = Appscript.app('iTunes')
-  tracks = itunes.tracks.get
-  total_tracks = tracks.length
-  bar = ProgressBar.new(total_tracks, :bar, :counter)
+  library = itunes.library_playlists['Library']
+  tracks = library.tracks.get
+  bar = ProgressBar.new(tracks.length, :bar, :counter)
   tracks.each do |track|
-    track_artist = track.artist.get.to_ascii.parameterize
-    track_album = track.album.get.to_ascii.parameterize
-    track_name = track.name.get.to_ascii.parameterize
+    track_artist = track.artist.get.to_ascii.downcase
+    track_album = track.album.get.to_ascii.downcase
+    track_name = track.name.get.to_ascii.downcase
     track_album_rating = track.album_rating.get.to_i
     track_rating = track.rating.get.to_i
-    ## puts "#{track_artist} - [#{track_album_rating}] #{track_album} - [#{track_rating}] #{track_name}"
     discogs_artist = discogs_ratings[track_artist]
     if discogs_artist.nil?
       # artist not in discogs
@@ -152,7 +186,7 @@ def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=f
       bar.increment!
       next
     end
-    discogs_rating = discogs_album['rating'] * $convertion_ratio
+    discogs_rating = discogs_album['rating'] * $CONVERTION_RATIO
     if update_songs
       # update song
       if discogs_rating > track_rating || override_values
@@ -178,10 +212,10 @@ def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=f
         results['albums']['not_updated'][track_artist][track_album] ||= {'from' => track_album_rating, 'to' => discogs_rating}
       end
     end
-    ## puts "#{track_artist} - [#{track_album_rating} -> #{discogs_rating}] #{track_album} - [#{track_rating} -> #{discogs_rating}] #{track_name}"
+    #puts "#{track_artist} - [#{track_album_rating} -> #{discogs_rating}] #{track_album} - [#{track_rating} -> #{discogs_rating}] #{track_name}"
     bar.increment!
   end
-  ## puts results
+  #puts results
   artists_miss = results['artists']['miss'].values.reduce(:+) || 0
   albums_miss = results['albums']['miss'].values.map{ |b| b.values.reduce(:+) }.reduce(:+) || 0
   albums_updated = results['albums']['updated'].values.map { |b| b.values.length }.reduce(:+) || 0
@@ -189,29 +223,35 @@ def update_itunes_ratings(discogs_ratings, update_songs=false, override_values=f
   songs_miss = results['songs']['miss'].values.map{ |b| b.values.reduce(:+) }.reduce(:+) || 0
   songs_updated = results['songs']['updated'].values.map { |b| b.values.length }.reduce(:+) || 0
   songs_not_updated = results['songs']['not_updated'].values.map { |b| b.values.length }.reduce(:+) || 0
-  puts "%i band misses" % artists_miss
-  puts "%i album misses" % albums_miss
-  puts "%i albums updated" % albums_updated
-  puts "%i albums not updated" % albums_not_updated
-  puts "%i song misses" % songs_miss
-  puts "%i songs updated" % songs_updated
-  puts "%i songs not updated" % songs_not_updated
+  puts "#{artists_miss} band misses"
+  puts "#{albums_miss} album misses" % albums_miss
+  puts "#{albums_updated} albums updated" % albums_updated
+  puts "#{albums_not_updated} albums not updated" % albums_not_updated
+  puts "#{songs_miss} song misses" % songs_miss
+  puts "#{songs_updated} songs updated" % songs_updated
+  puts "#{songs_not_updated} songs not updated" % songs_not_updated
 end
 
 
 def main()
   apikey = nil
   username = nil
-  datafile = $data_file
-  update_songs = false
+  datafile = $DATA_FILE
+  last_updated = 0
   override_values = false
+  ratings = {}
+  update_songs = false
+  if ARGV.length < 1
+    usage()
+    exit 0
+  end
   opts = GetoptLong.new(
+  [ '--datafile', '-f', GetoptLong::REQUIRED_ARGUMENT ],
     [ '--help', '-h', GetoptLong::NO_ARGUMENT ],
     [ '--apikey', '-k', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--username', '-u', GetoptLong::REQUIRED_ARGUMENT ],
-    [ '--songs', '-s', GetoptLong::NO_ARGUMENT ],
     [ '--override', '-o', GetoptLong::NO_ARGUMENT ],
-    [ '--datafile', '-f', GetoptLong::REQUIRED_ARGUMENT ]
+    [ '--songs', '-s', GetoptLong::NO_ARGUMENT ],
+    [ '--username', '-u', GetoptLong::REQUIRED_ARGUMENT ]
   )
   begin
     opts.each do |opt, arg|
@@ -231,20 +271,21 @@ def main()
         override_values = true
       end
     end
-  rescue StandardError=>my_error_message
-    usage()
+  rescue StandardError => my_error_message
     exit 3
   end
   if username.nil? or apikey.nil?
-    usage()
+    STDERR.puts "  'username' and 'apikey' are mandatory"
     exit 4
   end
-  discogs_ratings = load_data(datafile)
-  if discogs_ratings.nil?
-    discogs_ratings = get_discogs_ratings(username, apikey)
-    save_data(datafile, discogs_ratings)
+  data = load_data(datafile)
+  if data
+    last_updated = data.fetch('last_updated', 0).to_i
+    ratings = data.fetch('ratings', {})
   end
-  update_itunes_ratings(discogs_ratings, update_songs, override_values)
+  data = get_discogs_ratings(username, apikey, ratings)
+  save_data(datafile, data)
+  update_itunes_ratings(data['ratings'], update_songs, override_values)
 end
 
 
