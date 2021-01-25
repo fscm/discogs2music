@@ -1,3 +1,6 @@
+**[LEGACY] This branch is no longer maintained**
+> While this project is fully active, this branch is no longer maintained and therefore is no longer up to date. You are still welcome to explore, learn, and use the code provided here.
+
 # discogs2itunes
 
 Update your iTunes album ratings with your Discogs ratings.
@@ -126,14 +129,17 @@ to contribute to this project.
 
 ## Versioning
 
-This project uses [SemVer](http://semver.org/) for versioning. For the versions available, see the [tags on this repository](https://github.com/fscm/discogs2itunes/tags).
+This project uses [SemVer](http://semver.org/) for versioning. For the versions 
+available, see the [tags on this repository](https://github.com/fscm/discogs2itunes/tags).
 
 ## Authors
 
 * **Frederico Martins** - [fscm](https://github.com/fscm)
 
-See also the list of [contributors](https://github.com/fscm/discogs2itunes/contributors) who participated in this project.
+See also the list of [contributors](https://github.com/fscm/discogs2itunes/contributors) 
+who participated in this project.
 
 ## License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) 
+file for details
