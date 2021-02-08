@@ -2,6 +2,19 @@
 *.test
 *.json
 *.dat
+venv/*
+!.gitkeep
+
+# Python
+.mypy_cache/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info
+build/
+dist/
+out/
 
 # macOS
 *.DS_Store
